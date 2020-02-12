@@ -39,8 +39,14 @@ typedef enum {
     kLevelNone,     // Special level used to disable all log messages.
 } TLogLevel;
 
+typedef enum {
+    kTypeNormal = 0,
+    kTypeImportant = 1,
+} TLogType;
+
 typedef struct XLoggerInfo_t {
     TLogLevel level;
+    TLogType type;
     const char* tag;
     const char* filename;
     const char* func_name;

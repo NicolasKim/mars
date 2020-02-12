@@ -38,12 +38,12 @@
 
 void log_formater(const XLoggerInfo* _info, const char* _logbody, PtrBuffer& _log) {
     static const char* levelStrings[] = {
-        "V",
-        "D",  // debug
-        "I",  // info
-        "W",  // warn
-        "E",  // error
-        "F"  // fatal
+        "VERBOSE",
+        "DEBUG",    // debug
+        "INFO",     // info
+        "WARN",     // warn
+        "ERROR",    // error
+        "FATAL",    // fatal
     };
 
     assert((unsigned int)_log.Pos() == _log.Length());
@@ -79,27 +79,36 @@ void log_formater(const XLoggerInfo* _info, const char* _logbody, PtrBuffer& _lo
             time_t sec = _info->timeval.tv_sec;
             tm tm = *localtime((const time_t*)&sec);
 #ifdef ANDROID
-            snprintf(temp_time, sizeof(temp_time), "%d-%02d-%02d %+.1f %02d:%02d:%02d.%.3ld", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday,
-                     tm.tm_gmtoff / 3600.0, tm.tm_hour, tm.tm_min, tm.tm_sec, _info->timeval.tv_usec / 1000);
+            snprintf(temp_time, sizeof(temp_time), "%d-%02d-%02d %02d:%02d:%02d.%.3ld", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, _info->timeval.tv_usec / 1000);
 #elif _WIN32
-            snprintf(temp_time, sizeof(temp_time), "%d-%02d-%02d %+.1f %02d:%02d:%02d.%.3d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday,
-                     (-_timezone) / 3600.0, tm.tm_hour, tm.tm_min, tm.tm_sec, _info->timeval.tv_usec / 1000);
+            snprintf(temp_time, sizeof(temp_time), "%d-%02d-%02d %02d:%02d:%02d.%.3d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, _info->timeval.tv_usec / 1000);
 #else
-            snprintf(temp_time, sizeof(temp_time), "%d-%02d-%02d %+.1f %02d:%02d:%02d.%.3d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday,
-                     tm.tm_gmtoff / 3600.0, tm.tm_hour, tm.tm_min, tm.tm_sec, _info->timeval.tv_usec / 1000);
+            snprintf(temp_time, sizeof(temp_time), "%d-%02d-%02d %02d:%02d:%02d.%.3d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, _info->timeval.tv_usec / 1000);
 #endif
         }
 
         // _log.AllocWrite(30*1024, false);
-        int ret = snprintf((char*)_log.PosPtr(), 1024, "[%s][%s][%" PRIdMAX ", %" PRIdMAX "%s][%s][%s, %s, %d][",  // **CPPLINT SKIP**
-                           _logbody ? levelStrings[_info->level] : levelStrings[kLevelFatal], temp_time,
-                           _info->pid, _info->tid, _info->tid == _info->maintid ? "*" : "", _info->tag ? _info->tag : "",
-                           filename, strFuncName, _info->line);
-
+//        int ret = snprintf((char*)_log.PosPtr(), 1024, "[%s][%s][%" PRIdMAX ", %" PRIdMAX "%s][%s][%s, %s, %d][",  // **CPPLINT SKIP**
+//                           _logbody ? levelStrings[_info->level] : levelStrings[kLevelFatal], temp_time,
+//                           _info->pid, _info->tid, _info->tid == _info->maintid ? "*" : "", _info->tag ? _info->tag : "",
+//                           filename, strFuncName, _info->line);
+        //[日志时间][进程ID，线程ID][文件，方法，行数][日志等级][业务标示][日志类型] 日志内容
+        //[%s][%" PRIdMAX ",%" PRIdMAX "][%s,%s,%d][%s][%s] msg
+        int ret = snprintf((char*)_log.PosPtr(), 1024, "[%s][%" PRIdMAX ",%" PRIdMAX "][%s,%s,%d][%s][%s][%d]",  // **CPPLINT SKIP**
+                           temp_time,
+                           _info->pid,
+                           _info->tid,
+                           filename,
+                           strFuncName,
+                           _info->line,
+                           _logbody ? levelStrings[_info->level] : levelStrings[kLevelFatal],
+                           _info->tag ? _info->tag : "",
+                           _info->type);
+        
         assert(0 <= ret);
         _log.Length(_log.Pos() + ret, _log.Length() + ret);
         //      memcpy((char*)_log.PosPtr() + 1, "\0", 1);
-
+        
         assert((unsigned int)_log.Pos() == _log.Length());
     }
 
