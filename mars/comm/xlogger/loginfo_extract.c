@@ -49,7 +49,7 @@ void ExtractFunctionName(const char* _func, char* _func_ret, int _len) {
         
         if ('(' == *pos) {
             end = pos;
-        } else if (NULL != start && (':' == *pos || ']' == *pos)) {
+        } else if (NULL != start && ']' == *pos) {
             end = pos;
             break;
         }

@@ -11,11 +11,12 @@ SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
 BUILD_OUT_PATH = 'cmake_build/iOS'
 INSTALL_PATH = BUILD_OUT_PATH + '/Darwin.out'
 
-IOS_BUILD_SIMULATOR_CMD = 'cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=SIMULATOR -DIOS_ARCH="x86_64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1 && make -j8 && make install'
-IOS_BUILD_OS_CMD = 'cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=OS -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1 && make -j8 && make install'
+IOS_BUILD_SIMULATOR_CMD = 'cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=SIMULATOR -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DENABLE_VISIBILITY=1 && make -j8 && make install'
+IOS_BUILD_SIMULATOR_CMD_X86 = 'cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=SIMULATOR -DIOS_ARCH=x86_64 -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DENABLE_VISIBILITY=1 && make -j8 && make install'
+IOS_BUILD_OS_CMD = 'cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=OS -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DENABLE_VISIBILITY=1 && make -j8 && make install'
 
-GEN_IOS_OS_PROJ = 'cmake ../.. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=OS -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1'
-OPEN_SSL_ARCHS = ['x86_64', 'arm64']
+GEN_IOS_OS_PROJ = 'cmake ../.. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../ios.toolchain.cmake -DIOS_PLATFORM=OS -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DENABLE_VISIBILITY=1'
+OPEN_SSL_ARCHS = ['x86_64','i386','armv7','armv7s','arm64']
 
 
 def build_ios(tag=''):
@@ -23,7 +24,6 @@ def build_ios(tag=''):
     
     clean(BUILD_OUT_PATH)
     os.chdir(BUILD_OUT_PATH)
-    
     ret = os.system(IOS_BUILD_OS_CMD)
     os.chdir(SCRIPT_PATH)
     if ret != 0:
@@ -42,13 +42,26 @@ def build_ios(tag=''):
         print('!!!!!!!!!!!build simulator fail!!!!!!!!!!!!!!!')
         return False
     
-    libtool_simulator_dst_lib = INSTALL_PATH + '/simulator'
+    libtool_simulator_dst_lib = INSTALL_PATH + '/simulatori'
     if not libtool_libs(glob.glob(INSTALL_PATH + '/*.a'), libtool_simulator_dst_lib):
+        return False
+
+    clean(BUILD_OUT_PATH)
+    os.chdir(BUILD_OUT_PATH)
+    ret = os.system(IOS_BUILD_SIMULATOR_CMD_X86)
+    os.chdir(SCRIPT_PATH)
+    if ret != 0:
+        print('!!!!!!!!!!!build simulator fail!!!!!!!!!!!!!!!')
+        return False
+
+    libtool_simulator_dst_lib_x86 = INSTALL_PATH + '/simulatorx'
+    if not libtool_libs(glob.glob(INSTALL_PATH + '/*.a'), libtool_simulator_dst_lib_x86):
         return False
 
     lipo_src_libs = []
     lipo_src_libs.append(libtool_os_dst_lib)
     lipo_src_libs.append(libtool_simulator_dst_lib)
+    lipo_src_libs.append(libtool_simulator_dst_lib_x86)
     ssl_lib = INSTALL_PATH + '/ssl'
     if not lipo_thin_libs('openssl/openssl_lib_iOS/libssl.a', ssl_lib, OPEN_SSL_ARCHS):
         return False
@@ -96,13 +109,27 @@ def build_ios_xlog(tag=''):
         print('!!!!!!!!!!!build simulator fail!!!!!!!!!!!!!!!')
         return False
     
-    libtool_simulator_dst_lib = INSTALL_PATH + '/simulator'
-    if not libtool_libs([INSTALL_PATH + '/libcomm.a', INSTALL_PATH + '/libmars-boost.a', INSTALL_PATH + '/libxlog.a'], libtool_simulator_dst_lib):
+    libtool_simulator_dst_lib_i386 = INSTALL_PATH + '/simulator_i386'
+    if not libtool_libs([INSTALL_PATH + '/libcomm.a', INSTALL_PATH + '/libmars-boost.a', INSTALL_PATH + '/libxlog.a'], libtool_simulator_dst_lib_i386):
+        return False
+
+    clean(BUILD_OUT_PATH)
+    os.chdir(BUILD_OUT_PATH)
+    ret = os.system(IOS_BUILD_SIMULATOR_CMD_X86)
+    os.chdir(SCRIPT_PATH)
+    if ret != 0:
+        print('!!!!!!!!!!!build simulator fail!!!!!!!!!!!!!!!')
+        return False
+
+    libtool_simulator_dst_lib_x86 = INSTALL_PATH + '/simulator_x86'
+    if not libtool_libs([INSTALL_PATH + '/libcomm.a', INSTALL_PATH + '/libmars-boost.a', INSTALL_PATH + '/libxlog.a'],
+                        libtool_simulator_dst_lib_x86):
         return False
 
     lipo_src_libs = []
     lipo_src_libs.append(libtool_os_dst_lib)
-    lipo_src_libs.append(libtool_simulator_dst_lib)
+    lipo_src_libs.append(libtool_simulator_dst_lib_i386)
+    lipo_src_libs.append(libtool_simulator_dst_lib_x86)
     lipo_dst_lib = INSTALL_PATH + '/mars'
 
     if not lipo_libs(lipo_src_libs, lipo_dst_lib):
