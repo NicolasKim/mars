@@ -36,20 +36,12 @@ void ExtractFunctionName(const char* _func, char* _func_ret, int _len) {
     const char* pos = _func;
     
     while ('\0' != *pos) {
-        if (NULL == end && ' ' == *pos) {
+        if (NULL == end && '[' == *pos) {
             start = ++pos;
             continue;
         }
-        
-        if (':' == *pos && ':' == *(pos+1)) {
-            pos += 2;
-            start = pos;
-            continue;
-        }
-        
-        if ('(' == *pos) {
-            end = pos;
-        } else if (NULL != start && ']' == *pos) {
+
+        if (NULL != start && ']' == *pos) {
             end = pos;
             break;
         }
